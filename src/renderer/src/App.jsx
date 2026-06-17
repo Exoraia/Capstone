@@ -1,32 +1,36 @@
-import React, { useState } from 'react'
-import Login from './Login'
-import Workspace from './Workspace'
+import React, { useState } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
+// Import semua halaman yang sudah kita buat
+import Login from './Login';
+import MainLayout from './layouts/MainLayout';
+import DashboardPage from './pages/DashboardPage';
+import SchedulePage from './pages/SchedulePage';
+import CreateProjectPage from './pages/CreateProjectPage'; 
+import ProjectDetailsPage from './pages/ProjectDetailsPage';
 
 function App() {
-  // In the future, this state will be checked against your secure tokens
-  const [isAuthenticated, setIsAuthenticated] = useState(true)
+  // Ubah ke false nanti jika ingin mengaktifkan halaman login kembali
+  const [isAuthenticated, setIsAuthenticated] = useState(true); 
 
-  const handleGoogleLogin = () => {
-    console.log("Triggering Google OAuth via IPC Bridge...")
-    
-    // Define the target URL (eventually your Node backend auth URL)
-    const authUrl = 'https://google.com'
-    
-    // Trigger the desktop bridge
-    if (window.electronAPI) {
-      window.electronAPI.openAuthLink(authUrl)
-    } else {
-      // Fallback if testing in a standard web browser environment
-      window.open(authUrl, '_blank')
-    }
-  }
+  return (
+    <Router>
+      <Routes>
+        {/* Rute Login */}
+        <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/dashboard" />} />
 
-  // If they aren't logged in, show the Login screen. If they are, show the Workspace.
-  return isAuthenticated ? (
-    <Workspace />
-  ) : (
-    <Login onLogin={handleGoogleLogin} />
-  )
+        {/* Rute Ber-Layout (Hanya bisa diakses jika login) */}
+        <Route element={isAuthenticated ? <MainLayout /> : <Navigate to="/login" />}>
+          
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/schedule/:eventId" element={<SchedulePage />} />
+          <Route path="/create-project" element={<CreateProjectPage />} />
+          <Route path="/project/:projectId" element={<ProjectDetailsPage />} />          
+          <Route path="/" element={<Navigate to="/dashboard" />} />
+        </Route>
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;
