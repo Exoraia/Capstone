@@ -21,6 +21,7 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "electron-updater": "^6.3.9",
+    "firebase": "^12.15.0",
     "lucide-react": "^1.18.0",
     "react-router-dom": "^7.17.0"
   },

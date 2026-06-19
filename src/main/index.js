@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import fs from 'fs' // <-- BARU: Mengimpor modul File System bawaan Node.js
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
@@ -22,9 +23,21 @@ function createWindow() {
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
+    console.log('Mencoba membuka:', details.url);
+    if (
+      details.url === 'about:blank' ||
+      details.url.includes('google.com') ||
+      details.url.includes('firebaseapp.com') ||
+      details.url.includes('googleapis.com')
+    ) {
+      return { action: 'allow' };
+    }
+    
+    import('electron').then(({ shell }) => {
+      shell.openExternal(details.url);
+    });
+    return { action: 'deny' };
+  });
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
@@ -54,6 +67,46 @@ app.whenReady().then(() => {
   ipcMain.on('open-auth-link', (event, url) => {
     shell.openExternal(url)
   })
+
+  // ========================================================================
+  // BARU: IPC Handler untuk Membaca File Txt dari Documents
+  // ========================================================================
+  ipcMain.handle('read-txt-file', async (event, fileName) => {
+    try {
+      const dirPath = join(app.getPath('documents'), 'WorkNet_Files');
+      const filePath = join(dirPath, fileName);
+      
+      if (fs.existsSync(filePath)) {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        return { success: true, content };
+      }
+      // Jika file fisik belum ada di disk, kembalikan string kosong
+      return { success: true, content: '' }; 
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
+  // ========================================================================
+  // BARU: IPC Handler untuk Menyimpan/Menulis File Txt ke Documents
+  // ========================================================================
+  ipcMain.handle('save-txt-file', async (event, { fileName, content }) => {
+    try {
+      const dirPath = join(app.getPath('documents'), 'WorkNet_Files');
+      
+      // Buat folder WorkNet_Files otomatis jika belum tersedia
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+      
+      const filePath = join(dirPath, fileName);
+      fs.writeFileSync(filePath, content, 'utf-8');
+      return { success: true, filePath };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  // ========================================================================
   
   createWindow()
 

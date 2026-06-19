@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { 
-  Menu, ChevronRight, LayoutGrid, ChevronDown, User, FolderPlus, FilePlus 
+  Menu, ChevronRight, LayoutGrid, ChevronDown, User, FolderPlus, FilePlus, Settings 
 } from 'lucide-react';
 import FileTreeNode from '../components/FileTreeNode';
 
@@ -33,6 +33,7 @@ const MainLayout = () => {
   const getPageTitle = () => {
     if (location.pathname === '/dashboard') return 'My Projects';
     if (location.pathname === '/create-project') return 'Create Project';
+    if (location.pathname === '/settings') return 'Settings';
     const activeEvent = schedule.find(e => location.pathname.includes(e.id));
     if (activeEvent) return activeEvent.label;
     return 'Workspace';
@@ -62,6 +63,7 @@ const MainLayout = () => {
             )}
           </div>
 
+          {/* AREA SCROLL (Jadwal & Folder) */}
           <div className="flex-1 overflow-y-auto py-3">
             
             <div className="px-2 mb-6">
@@ -100,13 +102,23 @@ const MainLayout = () => {
             </div>
 
           </div>
+
+          {/* FOOTER SIDEBAR (Settings Pinned ke Bawah) */}
+          <div className="p-3 border-t border-[#B2B2B2]/10 mt-auto">
+            <Link 
+              to="/settings" 
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-bold transition-all ${location.pathname === '/settings' ? 'bg-[#4161FF] text-white shadow-md' : 'text-[#B2B2B2] hover:bg-[#B2B2B2]/10 hover:text-white'}`}
+            >
+              <Settings size={18} className={location.pathname === '/settings' ? "text-white" : "opacity-80"} /> 
+              Settings
+            </Link>
+          </div>
         </aside>
       )}
 
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-transparent">
         
-        {/* HEADER */}
         <header className="h-11 bg-[#B2B2B2] flex items-center justify-between px-3 border-b border-[#313131]/10 shadow-sm z-10 flex-shrink-0">
           <div className="flex items-center gap-2 text-sm text-[#313131]">
             <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-1 hover:bg-[#313131]/10 rounded transition-colors text-[#313131]"> 
