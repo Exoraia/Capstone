@@ -1,14 +1,14 @@
+// Lokasi: src/renderer/src/components/PersonalProjectView.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   CheckCircle2, Circle, Plus, ExternalLink, FileText, 
-  Video, Code, Trash2, ArrowLeft, LayoutGrid, Edit2, 
+  Video, Code, Trash2, ArrowLeft, Edit2, 
   Check, X, Link as LinkIcon, Folder, Image as ImageIcon,
   File, Search, FolderOpen, AlertCircle
 } from 'lucide-react';
 
-const ProjectDetailsPage = () => {
-  const { projectId } = useParams();
+const PersonalProjectView = ({ projectId }) => {
   const navigate = useNavigate();
   const [project, setProject] = useState(null);
 
@@ -23,16 +23,13 @@ const ProjectDetailsPage = () => {
   const [fileSearchQuery, setFileSearchQuery] = useState('');
   const [selectedFolderId, setSelectedFolderId] = useState(null);
 
-  // --- STATES MODAL ---
+  // States Modal
   const [folderPrompt, setFolderPrompt] = useState(false);
   const [folderNameInput, setFolderNameInput] = useState('');
-
   const [filePrompt, setFilePrompt] = useState({ isOpen: false, targetFolderId: null });
   const [fileNameInput, setFileNameInput] = useState('');
-
   const [embedPrompt, setEmbedPrompt] = useState({ isOpen: false, url: '' });
   const [embedTitleInput, setEmbedTitleInput] = useState('');
-
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, message: '', action: null });
 
   useEffect(() => {
@@ -91,7 +88,6 @@ const ProjectDetailsPage = () => {
     updateTodoProgress(todos.filter(t => t.id !== todoId));
   };
 
-  // --- HANDLERS EMBED ---
   const handleAddEmbedClick = (e) => {
     if (e.key === 'Enter' && newEmbedUrl.trim() !== '') {
       let url = newEmbedUrl.trim();
@@ -119,7 +115,6 @@ const ProjectDetailsPage = () => {
     saveProjectUpdate({ embeds: newEmbeds });
   };
 
-  // --- HANDLERS FOLDER & FILES ---
   const confirmAddFolder = () => {
     if (folderNameInput.trim()) {
       const newFolder = { id: `folder-${Date.now()}`, name: folderNameInput.trim(), files: [] };
@@ -180,24 +175,7 @@ const ProjectDetailsPage = () => {
     }).filter(folder => folder.files.length > 0 || folder.name.toLowerCase().includes(query));
   };
 
-  if (!project) return <div className="flex h-full items-center justify-center text-[#313131]/50 font-bold">Mencari Data Project...</div>;
-
-  if (project.type === 'group') {
-    return (
-      <div className="animate-in fade-in duration-500">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-[#313131]/60 hover:text-[#4161FF] font-bold text-sm mb-6 transition-colors">
-          <ArrowLeft size={16} /> Kembali
-        </button>
-        <h1 className="text-3xl font-bold text-[#313131] mb-2">{project.title}</h1>
-        <p className="text-sm font-medium text-[#313131]/60 mb-8">Group Project Workspace</p>
-        <div className="bg-white border-2 border-dashed border-[#313131]/20 rounded-2xl p-12 text-center">
-          <LayoutGrid size={40} className="mx-auto text-[#313131]/30 mb-4" />
-          <h2 className="text-xl font-bold text-[#313131] mb-2">Area Kanban Group Project</h2>
-          <p className="text-[#313131]/60 text-sm">Tempatkan kode layout Kanban Anda di sini untuk proyek kolaboratif.</p>
-        </div>
-      </div>
-    );
-  }
+  if (!project) return null;
 
   const activeTodos = todos.filter(t => !t.completed);
   const completedTodos = todos.filter(t => t.completed);
@@ -229,7 +207,7 @@ const ProjectDetailsPage = () => {
           <ArrowLeft size={16} /> Kembali
         </button>
 
-        {/* --- TITLE AREA --- */}
+        {/* HEADER AREA */}
         <div className="bg-white rounded-2xl p-8 border border-[#313131]/10 shadow-sm mb-8 relative overflow-hidden">
           <div className={`absolute top-0 left-0 right-0 h-1.5 ${project.progress === 100 ? 'bg-green-500' : 'bg-[#4161FF]'}`}></div>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -273,7 +251,6 @@ const ProjectDetailsPage = () => {
           </div>
         </div>
 
-        {/* --- GRID TENGAH: TODO LIST & EMBEDS --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           
           <div className="lg:col-span-2">
@@ -341,8 +318,6 @@ const ProjectDetailsPage = () => {
 
                   return (
                     <div key={idx} className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#313131]/10 shadow-sm hover:border-[#4161FF]/50 transition-all group flex-shrink-0">
-                      
-                      {/* BARU: Membuka link secara paksa di browser utama via IPC */}
                       <div 
                         onClick={() => {
                           if (window.electron && window.electron.ipcRenderer) {
@@ -371,7 +346,6 @@ const ProjectDetailsPage = () => {
 
         </div>
 
-        {/* --- BAGIAN BAWAH: REFERENCES --- */}
         <div className="w-full">
           <section className="bg-white rounded-2xl p-6 border border-[#313131]/10 shadow-sm flex flex-col">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#313131]/10 pb-4 mb-6 gap-4">
@@ -428,9 +402,7 @@ const ProjectDetailsPage = () => {
 
       </div>
 
-      {/* ========================================================= */}
-      {/* MODAL ISI FOLDER */}
-      {/* ========================================================= */}
+      {/* ALL MODALS */}
       {activeFolder && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200" onClick={() => setSelectedFolderId(null)}>
           <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
@@ -447,7 +419,6 @@ const ProjectDetailsPage = () => {
                 <button onClick={() => setSelectedFolderId(null)} className="p-2 text-[#313131]/30 hover:bg-[#B2B2B2]/20 hover:text-[#313131] rounded-lg transition-colors"><X size={20} /></button>
               </div>
             </div>
-
             <div className="p-6 flex-1 overflow-y-auto custom-scroll bg-[#B2B2B2]/5">
               {activeFolder.files.length === 0 ? (
                 <div className="text-center py-10">
@@ -470,7 +441,6 @@ const ProjectDetailsPage = () => {
                 </div>
               )}
             </div>
-
             <div className="p-4 border-t border-[#313131]/10 bg-white">
               <button onClick={() => setFilePrompt({ isOpen: true, targetFolderId: activeFolder.id })} className="w-full py-3 border-2 border-dashed border-[#313131]/20 rounded-xl text-sm font-bold text-[#313131]/60 hover:text-[#4161FF] hover:border-[#4161FF] hover:bg-[#4161FF]/5 transition-all flex items-center justify-center gap-2">
                 <Plus size={18} /> Tambahkan File Baru ke Folder Ini
@@ -480,9 +450,6 @@ const ProjectDetailsPage = () => {
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL ADD FOLDER */}
-      {/* ========================================================= */}
       {folderPrompt && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in" onClick={() => setFolderPrompt(false)}>
           <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
@@ -501,9 +468,6 @@ const ProjectDetailsPage = () => {
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL ADD FILE */}
-      {/* ========================================================= */}
       {filePrompt.isOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[70] p-4 animate-in fade-in" onClick={() => setFilePrompt({isOpen: false, targetFolderId: null})}>
           <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
@@ -522,9 +486,6 @@ const ProjectDetailsPage = () => {
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL ADD EMBED TITLE */}
-      {/* ========================================================= */}
       {embedPrompt.isOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in" onClick={() => setEmbedPrompt({isOpen: false, url: ''})}>
           <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
@@ -543,9 +504,6 @@ const ProjectDetailsPage = () => {
         </div>
       )}
 
-      {/* ========================================================= */}
-      {/* MODAL KONFIRMASI HAPUS */}
-      {/* ========================================================= */}
       {confirmDialog.isOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[80] p-4 animate-in fade-in" onClick={() => setConfirmDialog({isOpen: false, message: '', action: null})}>
           <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm text-center" onClick={e => e.stopPropagation()}>
@@ -565,4 +523,4 @@ const ProjectDetailsPage = () => {
   );
 };
 
-export default ProjectDetailsPage;
+export default PersonalProjectView;

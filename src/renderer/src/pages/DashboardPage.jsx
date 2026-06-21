@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Pin, Clock, Filter } from 'lucide-react';
 
@@ -6,20 +6,44 @@ const AVAILABLE_TAGS = ['Kewarganegaraan', 'Statistika', 'PBO', 'Internet of Thi
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-
-  const [projects, setProjects] = useState([
-    { id: 'p1', title: 'Rest API Connection', status: 'Ongoing', progress: 50, tags: ['Internet of Things'], isPinned: true, daysLeft: 4 },
-    { id: 'p2', title: 'PBO Final Assignment', status: 'In Progress', progress: 75, tags: ['PBO'], isPinned: false, daysLeft: 12 },
-    { id: 'p3', title: 'TryHackMe Writeups', status: 'Ongoing', progress: 40, tags: ['Cybersecurity'], isPinned: false, daysLeft: 20 },
-    { id: 'p4', title: 'Citizenship Essay', status: 'Planning', progress: 10, tags: ['Kewarganegaraan'], isPinned: false, daysLeft: 2 }
-  ]);
-
+  
+  // State dimulai dari array kosong
+  const [projects, setProjects] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [deadlineFilter, setDeadlineFilter] = useState('all');
 
+  // --- BARU: Mengambil Data dari LocalStorage saat komponen dimuat ---
+  useEffect(() => {
+    // 1. Ambil SEMUA data dari memory lokal
+    const savedProjects = JSON.parse(localStorage.getItem('worknet_projects') || '[]');
+    
+    // 2. FILTER: Hanya ambil project yang sifatnya personal (tanpa member)
+    const personalProjects = savedProjects
+      .filter(p => p.type !== 'group')
+      .map(p => ({
+        ...p,
+        // Fallback default untuk memastikan UI tidak error jika ada data lama yang kurang lengkap
+        tags: Array.isArray(p.tags) && p.tags.length > 0 ? p.tags : ['Internet of Things'],
+        daysLeft: p.daysLeft !== undefined ? p.daysLeft : 14,
+        progress: p.progress || 0,
+        isPinned: p.isPinned || false
+      }));
+
+    setProjects(personalProjects);
+  }, []);
+
+  // --- DIPERBARUI: Fungsi Pin agar tersimpan permanen di memori ---
   const togglePin = (id, e) => {
     e.stopPropagation();
-    setProjects(projects.map(p => p.id === id ? { ...p, isPinned: !p.isPinned } : p));
+    
+    // 1. Update UI secara instan
+    const updatedProjects = projects.map(p => p.id === id ? { ...p, isPinned: !p.isPinned } : p);
+    setProjects(updatedProjects);
+
+    // 2. Simpan status Pin yang baru ke LocalStorage
+    const allSaved = JSON.parse(localStorage.getItem('worknet_projects') || '[]');
+    const newSaved = allSaved.map(p => p.id === id ? { ...p, isPinned: !p.isPinned } : p);
+    localStorage.setItem('worknet_projects', JSON.stringify(newSaved));
   };
 
   const toggleTagFilter = (tag) => {
@@ -97,9 +121,11 @@ const DashboardPage = () => {
 
         <div>
           <h2 className="text-xl font-bold text-[#313131] mb-4 border-b border-[#313131]/20 pb-2">On Going</h2>
+          
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {ongoingProjects.map(proj => <ProjectCard key={proj.id} proj={proj} onTogglePin={togglePin} />)}
             
+            {/* Tombol Buat Project Baru Selalu Ada di Akhir */}
             <div 
               onClick={() => navigate('/create-project')}
               className="border-2 border-dashed border-[#313131]/30 rounded-xl p-6 flex flex-col items-center justify-center text-[#313131] hover:text-[#4161FF] hover:border-[#4161FF] hover:bg-white cursor-pointer transition-all min-h-[160px] bg-white/50"
@@ -116,11 +142,11 @@ const DashboardPage = () => {
 
 // --- KOMPONEN KARTU ---
 const ProjectCard = ({ proj, onTogglePin }) => {
-  const navigate = useNavigate(); // Hook navigasi dipanggil di sini
+  const navigate = useNavigate();
 
   return (
     <div 
-      onClick={() => navigate(`/project/${proj.id}`)} // Memicu navigasi ke halaman baru
+      onClick={() => navigate(`/project/${proj.id}`)} 
       className="border border-[#313131]/10 rounded-xl p-5 hover:shadow-lg transition-all bg-white flex flex-col justify-between min-h-[160px] cursor-pointer group relative overflow-hidden shadow-sm"
     >
       <div className={`absolute top-0 left-0 right-0 h-1 ${proj.progress === 100 ? 'bg-green-500' : 'bg-[#4161FF]'}`}></div>
@@ -136,11 +162,8 @@ const ProjectCard = ({ proj, onTogglePin }) => {
           </div>
           
           <button 
-            onClick={(e) => {
-              e.stopPropagation(); // Mencegah klik tombol pin agar tidak pindah halaman
-              onTogglePin(proj.id, e);
-            }}
-            className={`p-1.5 rounded-full transition-colors ${proj.isPinned ? 'bg-[#4161FF] text-white' : 'text-[#313131] hover:bg-[#B2B2B2] hover:text-[#4161FF]'}`}
+            onClick={(e) => onTogglePin(proj.id, e)}
+            className={`p-1.5 rounded-full transition-colors z-10 relative ${proj.isPinned ? 'bg-[#4161FF] text-white' : 'text-[#313131] hover:bg-[#B2B2B2] hover:text-[#4161FF]'}`}
           >
             <Pin size={16} className={proj.isPinned ? 'fill-current' : ''} />
           </button>

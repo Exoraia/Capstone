@@ -18,8 +18,12 @@ const analytics = getAnalytics(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// INI KUNCI UTAMANYA:
 // Memaksa Google untuk selalu memunculkan pop-up "Pilih Akun"
 googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
+
+// =====================================================================
+// BARU: Meminta izin (scope) untuk mengelola Google Drive
+// =====================================================================
+googleProvider.addScope('https://www.googleapis.com/auth/drive.file');

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom'; // Import fungsi navigasi
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth, googleProvider } from './services/firebase';
 
 function Login() {
@@ -8,10 +8,17 @@ function Login() {
 
   const handleGoogleLogin = async () => {
     try {
-      // 1. Tunggu proses login selesai
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
       
-      // 2. Langsung lempar ke dashboard tanpa pop-up alert yang jelek!
+      // BARU: Menangkap Access Token dari Google OAuth
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const token = credential.accessToken;
+      
+      // Simpan token ini di penyimpanan lokal browser (agar bisa dipakai saat membuat project)
+      if (token) {
+        localStorage.setItem('googleDriveToken', token);
+      }
+      
       navigate('/dashboard'); 
       
     } catch (error) {

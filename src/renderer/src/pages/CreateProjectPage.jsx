@@ -2,11 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, Clock, Plus, X, ImageIcon, 
-  FileText, Video, Code, ExternalLink, Mail as MailIcon
+  FileText, Video, Code, ExternalLink, Mail as MailIcon, Loader2, CheckCircle2, AlertCircle
 } from 'lucide-react';
+import { createDriveFolder } from '../services/drive'; 
 
 const CreateProjectPage = () => {
   const navigate = useNavigate();
+
+  const [projectName, setProjectName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
 
   const [emails, setEmails] = useState([]);
   const [emailInput, setEmailInput] = useState('');
@@ -20,6 +24,79 @@ const CreateProjectPage = () => {
   const [isEmbedPromptOpen, setIsEmbedPromptOpen] = useState(false);
   const [pendingEmbedUrl, setPendingEmbedUrl] = useState('');
   const [embedTitleInput, setEmbedTitleInput] = useState('');
+
+  // --- BARU: State untuk Custom Modal Notifikasi ---
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    type: 'success', // 'success' atau 'error'
+    title: '',
+    message: ''
+  });
+
+  const handleCreateProject = async () => {
+    if (!projectName.trim()) {
+      setNotification({
+        isOpen: true,
+        type: 'error',
+        title: 'Nama Project Kosong',
+        message: 'Mohon isi Nama Project terlebih dahulu sebelum membuat project baru.'
+      });
+      return;
+    }
+
+    setIsCreating(true); 
+
+    try {
+      const folderId = await createDriveFolder(projectName);
+      console.log("SUKSES! Folder Drive ID:", folderId);
+      
+      const existingProjects = JSON.parse(localStorage.getItem('worknet_projects') || '[]');
+      
+      // --- KODE YANG DIPERBARUI ---
+      const newProject = {
+        id: Date.now().toString(),
+        title: projectName, // Menggunakan 'title' agar cocok dengan Dashboard
+        folderId: folderId,
+        progress: 0,
+        daysLeft: 14, // Default waktu deadline
+        tags: ['New'],
+        isPinned: false,
+        members: emails, // Menyimpan daftar email yang diundang
+        type: emails.length > 0 ? 'group' : 'personal' // PENENTU KATEGORI OTOMATIS
+      };
+      // ---------------------------
+
+      localStorage.setItem('worknet_projects', JSON.stringify([...existingProjects, newProject]));
+      
+      // Tampilkan Modal Sukses yang Estetik
+      setNotification({
+        isOpen: true,
+        type: 'success',
+        title: 'Project Berhasil Dibuat!',
+        message: `Project "${projectName}" dan Folder sinkronisasi Google Drive telah sukses dibuat dan siap digunakan.`
+      });
+      
+    } catch (error) {
+      setNotification({
+        isOpen: true,
+        type: 'error',
+        title: 'Gagal Membuat Project',
+        message: error.message
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const closeNotification = () => {
+    const wasSuccess = notification.type === 'success';
+    setNotification({ ...notification, isOpen: false });
+    
+    // Jika sukses, lempar user ke dashboard setelah modal ditutup
+    if (wasSuccess) {
+      navigate('/dashboard');
+    }
+  };
 
   const handleAddEmail = (e) => {
     if (e.key === 'Enter' && emailInput.trim() !== '') {
@@ -41,11 +118,7 @@ const CreateProjectPage = () => {
     if (e.key === 'Enter' && embedInput.trim() !== '') {
       e.preventDefault();
       let url = embedInput.trim();
-      
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://' + url;
-      }
-
+      if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
       setPendingEmbedUrl(url);
       setIsEmbedPromptOpen(true);
       setEmbedInput('');
@@ -55,14 +128,12 @@ const CreateProjectPage = () => {
   const handleConfirmEmbedTitle = (e) => {
     if (e.key === 'Enter' || e.type === 'click') {
       const title = embedTitleInput.trim() || "Untitled Link";
-
       let type = 'link';
       if (pendingEmbedUrl.includes('docs.google.com')) type = 'docs';
       else if (pendingEmbedUrl.includes('youtube.com') || pendingEmbedUrl.includes('youtu.be')) type = 'youtube';
       else if (pendingEmbedUrl.includes('github.com')) type = 'github';
 
       setEmbeds([...embeds, { title, url: pendingEmbedUrl, type }]);
-      
       setIsEmbedPromptOpen(false);
       setPendingEmbedUrl('');
       setEmbedTitleInput('');
@@ -78,27 +149,38 @@ const CreateProjectPage = () => {
   const dashedBoxClass = "border-2 border-dashed border-[#313131]/30 bg-[#B2B2B2]/10 rounded-lg p-4 flex items-center gap-2 text-[#313131] hover:text-[#4161FF] hover:border-[#4161FF] hover:bg-white cursor-text transition-all";
 
   return (
-    <div className="bg-white min-h-full rounded-2xl p-8 shadow-sm border border-[#313131]/10 animate-in fade-in duration-500">
+    <div className="bg-white min-h-full rounded-2xl p-8 shadow-sm border border-[#313131]/10 animate-in fade-in duration-500 relative">
       
       <div className="flex justify-between items-end border-b border-[#313131]/10 pb-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-[#313131] tracking-wide">Create Project</h1>
           <div className="h-1 w-20 bg-[#4161FF] mt-2 rounded-full"></div>
         </div>
+        
         <button 
-          onClick={() => navigate('/dashboard')}
-          className="bg-[#4161FF] text-white font-bold px-8 py-3 rounded-lg hover:bg-[#313131] transition-colors shadow-md"
+          onClick={handleCreateProject}
+          disabled={isCreating}
+          className={`flex items-center gap-2 bg-[#4161FF] text-white font-bold px-8 py-3 rounded-lg shadow-md transition-all ${isCreating ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#313131]'}`}
         >
-          Create
+          {isCreating ? (
+            <><Loader2 size={18} className="animate-spin" /> Creating...</>
+          ) : (
+            'Create'
+          )}
         </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-16 gap-y-8">
-        
         <div className="space-y-6">
           <div>
             <label className={labelClass}>Project Name</label>
-            <input type="text" placeholder="e.g. Rest API Connection" className={inputClass} />
+            <input 
+              type="text" 
+              placeholder="e.g. Rest API Connection" 
+              className={inputClass}
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+            />
           </div>
 
           <div>
@@ -151,7 +233,6 @@ const CreateProjectPage = () => {
         </div>
 
         <div className="space-y-8">
-          
           <div>
             <label className={labelClass}>Manage Tasks</label>
             <div className="bg-[#B2B2B2]/10 border border-[#313131]/10 rounded-lg p-4 min-h-[160px]">
@@ -196,29 +277,20 @@ const CreateProjectPage = () => {
                 {embeds.map((embed, index) => {
                   let Icon = ExternalLink;
                   let iconColor = "text-[#4161FF]";
-                  
                   if (embed.type === 'docs') { Icon = FileText; iconColor = "text-blue-600"; }
                   if (embed.type === 'youtube') { Icon = Video; iconColor = "text-red-600"; }
                   if (embed.type === 'github') { Icon = Code; iconColor = "text-[#313131]"; }
 
                   return (
                     <a 
-                      key={index}
-                      href={embed.url}
-                      target="_blank"
-                      rel="noopener noreferrer" 
+                      key={index} href={embed.url} target="_blank" rel="noopener noreferrer" 
                       className="flex items-center gap-2 bg-white border border-[#313131]/10 shadow-sm text-sm text-[#313131] font-bold px-3 py-1.5 rounded-md hover:border-[#4161FF] transition-all cursor-pointer group"
                     >
                       <Icon size={14} className={iconColor} />
                       <span className="max-w-[150px] truncate">{embed.title}</span>
-                      
                       <div 
                         className="ml-1 p-0.5 rounded-sm text-[#313131]/40 hover:text-red-500 hover:bg-red-50 transition-colors"
-                        onClick={(e) => {
-                          e.preventDefault(); 
-                          e.stopPropagation();
-                          removeEmbed(index);
-                        }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeEmbed(index); }}
                       >
                         <X size={14} />
                       </div>
@@ -238,46 +310,53 @@ const CreateProjectPage = () => {
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* --- DIALOG PROMPT --- */}
+      {/* --- DIALOG PROMPT LINK --- */}
       {isEmbedPromptOpen && (
         <div className="fixed inset-0 bg-[#313131]/70 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in">
           <div className="bg-white p-6 rounded-2xl shadow-xl border border-[#313131]/10 w-96">
             <h3 className="text-lg font-bold text-[#313131] mb-1">Enter Link Title</h3>
             <p className="text-xs text-[#4161FF] mb-4 truncate font-medium">{pendingEmbedUrl}</p>
             <input 
-              type="text" 
-              placeholder="e.g. 'Proposal Project'" 
-              className={inputClass}
-              value={embedTitleInput}
-              onChange={(e) => setEmbedTitleInput(e.target.value)}
-              onKeyDown={handleConfirmEmbedTitle}
-              autoFocus
+              type="text" placeholder="e.g. 'Proposal Project'" className={inputClass}
+              value={embedTitleInput} onChange={(e) => setEmbedTitleInput(e.target.value)} onKeyDown={handleConfirmEmbedTitle} autoFocus
             />
             <div className="flex justify-end gap-3 mt-6">
-              <button 
-                onClick={() => {
-                  setIsEmbedPromptOpen(false);
-                  setEmbedTitleInput('');
-                  setPendingEmbedUrl('');
-                }}
-                className="px-4 py-2 text-sm font-bold text-[#313131]/60 hover:text-[#313131] transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleConfirmEmbedTitle}
-                className="bg-[#4161FF] text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-[#313131] transition-colors shadow-md"
-              >
-                Confirm
-              </button>
+              <button onClick={() => { setIsEmbedPromptOpen(false); setEmbedTitleInput(''); setPendingEmbedUrl(''); }} className="px-4 py-2 text-sm font-bold text-[#313131]/60 hover:text-[#313131] transition-colors">Cancel</button>
+              <button onClick={handleConfirmEmbedTitle} className="bg-[#4161FF] text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-[#313131] transition-colors shadow-md">Confirm</button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ================= CUSTOM NOTIFICATION MODAL ================= */}
+      {notification.isOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div 
+            className="bg-white w-full max-w-sm rounded-2xl shadow-2xl border border-gray-100 p-6 flex flex-col items-center text-center animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={`p-4 rounded-full mb-4 ${notification.type === 'success' ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'}`}>
+              {notification.type === 'success' ? <CheckCircle2 size={40} /> : <AlertCircle size={40} />}
+            </div>
+            
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{notification.title}</h3>
+            <p className="text-sm text-gray-500 leading-relaxed mb-8">{notification.message}</p>
+
+            <button
+              onClick={closeNotification}
+              className={`w-full py-3 font-bold text-sm text-white rounded-xl transition-all shadow-md ${
+                notification.type === 'success' ? 'bg-[#4161FF] hover:bg-blue-700 shadow-blue-600/20' : 'bg-red-600 hover:bg-red-700 shadow-red-600/20'
+              }`}
+            >
+              Mengerti
+            </button>
+          </div>
+        </div>
+      )}
+      {/* =================================================================== */}
 
     </div>
   );

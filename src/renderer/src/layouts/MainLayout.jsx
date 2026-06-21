@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { 
-  Menu, ChevronRight, LayoutGrid, ChevronDown, User, FolderPlus, FilePlus, Settings 
+  Menu, ChevronRight, LayoutGrid, ChevronDown, User, FolderPlus, FilePlus, Settings, LogOut, Users 
 } from 'lucide-react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from '../services/firebase'; 
 import FileTreeNode from '../components/FileTreeNode';
 
 const schedule = [
@@ -13,12 +15,32 @@ const schedule = [
 const MainLayout = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isProfileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null); 
   const location = useLocation();
 
   const [fileSystem, setFileSystem] = useState([
     { id: 'f1', type: 'folder', name: 'Project Alpha', isOpen: true, children: [{ id: 'doc1', type: 'file', name: 'brainstorming.txt' }] },
     { id: 'doc3', type: 'file', name: 'Getting_Started.md' }
   ]);
+
+  // Dengarkan status user dari Firebase
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    const confirmLogout = window.confirm("Apakah Anda yakin ingin keluar dari WorkNet?");
+    if (confirmLogout) {
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error("Gagal melakukan sign out:", error.message);
+      }
+    }
+  };
 
   const handleCreateFile = () => {
     const fileName = prompt("Enter new file name:");
@@ -32,6 +54,7 @@ const MainLayout = () => {
 
   const getPageTitle = () => {
     if (location.pathname === '/dashboard') return 'My Projects';
+    if (location.pathname === '/group-projects') return 'Group Projects';
     if (location.pathname === '/create-project') return 'Create Project';
     if (location.pathname === '/settings') return 'Settings';
     const activeEvent = schedule.find(e => location.pathname.includes(e.id));
@@ -46,18 +69,38 @@ const MainLayout = () => {
       {isSidebarOpen && (
         <aside className={`w-64 flex-shrink-0 flex flex-col bg-[#313131] text-[#B2B2B2] border-r border-[#313131] shadow-xl z-20`}>
           
+          {/* PROFILE SECTION DENGAN FIREBASE DATA */}
           <div className="relative">
-            <div onClick={() => setProfileMenuOpen(!isProfileMenuOpen)} className={`h-11 flex items-center justify-between px-4 cursor-pointer hover:bg-[#4161FF] border-b border-[#B2B2B2]/10 transition-colors`}>
-              <div className="flex items-center gap-2 font-medium text-sm">
-                <div className="w-5 h-5 bg-[#B2B2B2] text-[#313131] rounded flex items-center justify-center text-xs font-bold shadow-sm">D</div>
-                <span className="text-white">Hello, Dustin</span>
+            <div 
+              onClick={() => setProfileMenuOpen(!isProfileMenuOpen)} 
+              className={`h-11 flex items-center justify-between px-4 cursor-pointer hover:bg-[#4161FF] border-b border-[#B2B2B2]/10 transition-colors`}
+            >
+              <div className="flex items-center gap-2 font-medium text-sm max-w-[85%]">
+                {user?.photoURL ? (
+                  <img src={user.photoURL} alt="Profile" className="w-5 h-5 rounded object-cover border border-[#4161FF]/20" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="w-5 h-5 bg-[#B2B2B2] text-[#313131] rounded flex items-center justify-center text-xs font-bold shadow-sm">
+                    {user?.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                )}
+                <span className="text-white font-bold truncate">
+                  {user?.displayName ? `Hello, ${user.displayName.split(' ')[0]}` : 'Hello, User'}
+                </span>
               </div>
               <ChevronDown size={14} className={isProfileMenuOpen ? "rotate-180 transition-transform text-white" : "transition-transform text-[#B2B2B2]"} />
             </div>
+
+            {/* DROPDOWN MENU */}
             {isProfileMenuOpen && (
                <div className="absolute top-12 left-2 right-2 bg-[#313131] border border-[#4161FF] rounded-md shadow-xl z-50 overflow-hidden">
-                  <button className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left hover:bg-[#4161FF] hover:text-white transition-colors"> 
-                    <User size={14} /> Profile
+                  <div className="px-3 py-2 border-b border-[#B2B2B2]/10 text-[11px] text-[#B2B2B2] font-medium truncate">
+                    {user?.email}
+                  </div>
+                  <button 
+                    onClick={handleSignOut} 
+                    className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left hover:bg-red-500 hover:text-white transition-colors text-red-400 font-bold"
+                  > 
+                    <LogOut size={14} /> Sign Out
                   </button>
                </div>
             )}
@@ -78,9 +121,17 @@ const MainLayout = () => {
 
             <div className="px-2 mb-6">
               <div className="text-[11px] font-semibold text-[#B2B2B2]/60 px-2 mb-3 tracking-wider uppercase">Workspace</div>
-              <Link to="/dashboard" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${location.pathname === '/dashboard' ? 'bg-[#4161FF] text-white font-medium shadow-md' : 'text-[#B2B2B2] hover:bg-[#4161FF]/60 hover:text-white'}`}>
+              
+              {/* Menu My Projects */}
+              <Link to="/dashboard" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors mb-1 ${location.pathname === '/dashboard' ? 'bg-[#4161FF] text-white font-medium shadow-md' : 'text-[#B2B2B2] hover:bg-[#4161FF]/60 hover:text-white'}`}>
                 <LayoutGrid size={16} className={location.pathname === '/dashboard' ? "text-white" : "opacity-80"} /> 
                 My Projects
+              </Link>
+              
+              {/* Menu Group Projects */}
+              <Link to="/group-projects" className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${location.pathname === '/group-projects' ? 'bg-[#4161FF] text-white font-medium shadow-md' : 'text-[#B2B2B2] hover:bg-[#4161FF]/60 hover:text-white'}`}>
+                <Users size={16} className={location.pathname === '/group-projects' ? "text-white" : "opacity-80"} /> 
+                Group Projects
               </Link>
             </div>
 
