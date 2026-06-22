@@ -20,6 +20,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@hello-pangea/dnd": "^18.0.1",
     "electron-updater": "^6.3.9",
     "firebase": "^12.15.0",
     "lucide-react": "^1.18.0",

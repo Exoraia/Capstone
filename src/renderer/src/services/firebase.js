@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore"; 
 
 const firebaseConfig = {
   apiKey: "AIzaSyC2ZPChcwmWOpAMqAMY4mpG5c1ifmiFr0Y",
@@ -16,14 +17,17 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
 export const auth = getAuth(app);
+export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
-// Memaksa Google untuk selalu memunculkan pop-up "Pilih Akun"
-googleProvider.setCustomParameters({
-  prompt: 'select_account'
-});
-
-// =====================================================================
-// BARU: Meminta izin (scope) untuk mengelola Google Drive
-// =====================================================================
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
+
+// Mencegah error persistence dengan pengecekan sederhana
+enableIndexedDbPersistence(db).catch((err) => {
+  if (err.code === 'failed-precondition') {
+    console.warn("Persistence gagal: Multiple tabs open?");
+  } else if (err.code === 'unimplemented') {
+    console.warn("Persistence tidak didukung browser ini.");
+  }
+});

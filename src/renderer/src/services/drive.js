@@ -38,3 +38,28 @@ export const createDriveFolder = async (folderName) => {
     throw error;
   }
 };
+
+// Fungsi untuk menghapus folder secara permanen dari Google Drive
+export const deleteDriveFolder = async (folderId) => {
+  const token = localStorage.getItem('googleDriveToken');
+  if (!token) throw new Error("Token Drive tidak ditemukan");
+
+  try {
+    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gagal menghapus folder dari Drive. Status: ${response.status}`);
+    }
+    
+    console.log("Berhasil menghapus folder Drive dengan ID:", folderId);
+    return true;
+  } catch (error) {
+    console.error("Error Delete Drive:", error);
+    throw error;
+  }
+};
